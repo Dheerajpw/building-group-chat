@@ -1,3 +1,4 @@
+// AWS S3 configuration for media sharing
 const { S3Client } = require("@aws-sdk/client-s3");
 
 const s3 = new S3Client({
