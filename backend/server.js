@@ -4,14 +4,16 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
 
+
 dotenv.config();
 
 const { sequelize, connectDB } = require("./db");
 
 // ==================== MODELS ====================
-
+const ArchivedMessage = require("./models/archivedMessage");
 const User = require("./models/user");
 const Message = require("./models/message");
+const archiveMessagesJob = require("./archiveMessages");
 
 // ==================== ROUTES ====================
 
