@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Building Group Chat</title>
+
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+
+    <div class="chat-container">
+
+        <!-- ================= HEADER ================= -->
+
+        <div class="chat-header">
+
+            <div class="group-info">
+
+                <div class="group-avatar">
+                    🏢
+                </div>
+
+                <div>
+
+                    <h2 id="chatTitle">
+                        Building Group
+                    </h2>
+
+                    <p id="groupMembers">
+                        24 members
+                    </p>
+
+                </div>
+
+            </div>
+
+            <div class="header-icons">
+
+                <button type="button">
+                    🔍
+                </button>
+
+                <button type="button">
+                    ⋮
+                </button>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- GROUP CHAT SECTION -->
+        <!-- ================================================= -->
+
+        <div class="group-chat-section">
+
+            <input
+                type="text"
+                id="groupIdInput"
+                placeholder="Enter Group ID..."
+                autocomplete="off"
+            >
+
+            <button
+                id="joinGroupButton"
+                type="button"
+            >
+                Join Group
+            </button>
+
+            <button
+                id="createGroupButton"
+                type="button"
+            >
+                Create Group
+            </button>
+
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- PERSONAL CHAT SEARCH -->
+        <!-- ================================================= -->
+
+        <div class="personal-chat-section">
+
+            <input
+                type="email"
+                id="userEmailInput"
+                placeholder="Enter user email..."
+                autocomplete="off"
+            >
+
+            <button
+                id="joinChatButton"
+                type="button"
+            >
+                Join Chat
+            </button>
+
+        </div>
+
+
+        <!-- ================================================= -->
+        <!-- CURRENT ROOM -->
+        <!-- ================================================= -->
+
+        <div
+            id="currentRoomInfo"
+            class="current-room-info"
+        >
+            Group Chat
+        </div>
+
+
+        <!-- ================= CHAT AREA ================= -->
+
+        <div
+            class="chat-messages"
+            id="chatMessages"
+        >
+
+            <div class="date-label">
+                Today
+            </div>
+
+
+            <!-- Existing sample messages -->
+
+            <div class="message received">
+
+                <div class="sender-name">
+                    Rahul
+                </div>
+
+                <div class="message-content">
+
+                    <span>
+                        Hello everyone 👋
+                    </span>
+
+                    <span class="timestamp">
+                        10:30 AM
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="message received">
+
+                <div class="sender-name">
+                    Priya
+                </div>
+
+                <div class="message-content">
+
+                    <span>
+                        Good morning everyone!
+                    </span>
+
+                    <span class="timestamp">
+                        10:31 AM
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="message sent">
+
+                <div class="message-content">
+
+                    <span>
+                        Good morning 😊
+                    </span>
+
+                    <span class="timestamp">
+                        10:32 AM
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="message received">
+
+                <div class="sender-name">
+                    Amit
+                </div>
+
+                <div class="message-content">
+
+                    <span>
+                        Does anyone know about today's maintenance?
+                    </span>
+
+                    <span class="timestamp">
+                        10:35 AM
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="message sent">
+
+                <div class="message-content">
+
+                    <span>
+                        Yes, maintenance will start at 5 PM.
+                    </span>
+
+                    <span class="timestamp">
+                        10:36 AM
+                    </span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+
+        <!-- ================= MESSAGE INPUT ================= -->
+
+        <div class="chat-input-area">
+
+            <!-- EMOJI BUTTON -->
+
+            <button
+                class="emoji-button"
+                type="button"
+                title="Emoji"
+            >
+                😊
+            </button>
+
+
+            <!-- MEDIA UPLOAD BUTTON -->
+
+            <button
+                class="media-button"
+                id="mediaButton"
+                type="button"
+                title="Send media"
+            >
+                📎
+            </button>
+
+
+            <!-- HIDDEN FILE INPUT -->
+
+            <input
+                type="file"
+                id="mediaInput"
+                accept="image/*,video/*,.pdf,.doc,.docx,.txt"
+                hidden
+            >
+
+
+            <!-- MESSAGE INPUT -->
+
+            <input
+                type="text"
+                id="messageInput"
+                placeholder="Type a message..."
+                autocomplete="off"
+            >
+
+
+            <!-- SEND MESSAGE BUTTON -->
+
+            <button
+                class="send-button"
+                id="sendButton"
+                type="button"
+                title="Send message"
+            >
+                ➤
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================= SOCKET.IO ================= -->
+
+    <script src="http://localhost:5000/socket.io/socket.io.js"></script>
+
+
+    <!-- ================= CHAT SCRIPT ================= -->
+
+    <script src="script.js"></script>
+
+</body>
+
+</html>
