@@ -4,12 +4,12 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const http = require("http");
 
-
 dotenv.config();
 
 const { sequelize, connectDB } = require("./db");
 
 // ==================== MODELS ====================
+
 const ArchivedMessage = require("./models/archivedMessage");
 const User = require("./models/user");
 const Message = require("./models/message");
@@ -19,6 +19,7 @@ const archiveMessagesJob = require("./archiveMessages");
 
 const authRoutes = require("./routes/authRoutes");
 const messageRoutes = require("./routes/messageRoutes");
+const aiRoutes = require("./routes/aiRoutes");
 
 // ==================== SOCKET.IO ====================
 
@@ -52,15 +53,17 @@ app.use("/api/auth", authRoutes);
 
 app.use("/api/messages", messageRoutes);
 
+// ==================== AI ROUTES ====================
+
+app.use("/api/ai", aiRoutes);
+
 // ==================== TEST API ====================
 
 app.get("/", (req, res) => {
-
     res.json({
         success: true,
         message: "Group Chat Backend API is running",
     });
-
 });
 
 // ==================== DATABASE SYNC ====================
@@ -68,19 +71,15 @@ app.get("/", (req, res) => {
 sequelize
     .sync()
     .then(() => {
-
         console.log(
             "Database tables synchronized successfully"
         );
-
     })
     .catch((error) => {
-
         console.error(
             "Database sync failed:",
             error.message
         );
-
     });
 
 // ==================== HTTP SERVER ====================
@@ -100,7 +99,6 @@ setupSocket(server);
 server.listen(
     PORT,
     () => {
-
         console.log(
             `Server running on port ${PORT}`
         );
@@ -108,6 +106,5 @@ server.listen(
         console.log(
             "Socket.IO server running"
         );
-
     }
 );

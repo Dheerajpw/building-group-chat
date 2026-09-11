@@ -1,3 +1,4 @@
+
 // =====================================================
 // AUTH TOKEN
 // =====================================================
@@ -30,6 +31,17 @@ const joinChatButton =
 
 const currentRoomInfo =
     document.getElementById("currentRoomInfo");
+
+
+// =====================================================
+// AI ELEMENTS
+// =====================================================
+
+const typingSuggestions =
+    document.getElementById("typingSuggestions");
+
+const smartReplies =
+    document.getElementById("smartReplies");
 
 
 // =====================================================
@@ -77,6 +89,25 @@ let currentRoom = null;
 
 
 // =====================================================
+// AI SETTINGS
+// =====================================================
+
+const AI_API_URL =
+    "http://localhost:5000/api/ai";
+
+let typingTimer = null;
+
+let lastSuggestionText = "";
+
+
+// =====================================================
+// RECENT MESSAGES FOR AI
+// =====================================================
+
+let recentMessages = [];
+
+
+// =====================================================
 // SOCKET CONNECT
 // =====================================================
 
@@ -117,6 +148,8 @@ socket.on("receive_message", function (data) {
 
     createMessage(data);
 
+    handleIncomingAI(data);
+
 });
 
 
@@ -133,7 +166,84 @@ socket.on("receive_group_message", function (data) {
 
     createMessage(data);
 
+    handleIncomingAI(data);
+
 });
+
+
+// =====================================================
+// HANDLE INCOMING MESSAGE FOR AI
+// =====================================================
+
+function handleIncomingAI(data) {
+
+    if (!data || !data.message) {
+        return;
+    }
+
+
+    // ================================================
+    // ADD MESSAGE TO AI CONTEXT
+    // ================================================
+
+    addRecentMessage(
+        data.message
+    );
+
+
+    // ================================================
+    // CHECK IF MESSAGE IS FROM CURRENT USER
+    // ================================================
+
+    const user =
+        JSON.parse(
+            localStorage.getItem("user") || "null"
+        );
+
+
+    if (
+        user &&
+        data.userId &&
+        Number(data.userId) === Number(user.id)
+    ) {
+
+        return;
+
+    }
+
+
+    // ================================================
+    // GENERATE SMART REPLIES
+    // ================================================
+
+    generateSmartReplies(
+        data.message
+    );
+
+}
+
+
+// =====================================================
+// ADD MESSAGE TO AI CONTEXT
+// =====================================================
+
+function addRecentMessage(message) {
+
+    if (!message) {
+        return;
+    }
+
+    recentMessages.push(message);
+
+    // Keep only latest 5 messages
+    if (recentMessages.length > 5) {
+
+        recentMessages =
+            recentMessages.slice(-5);
+
+    }
+
+}
 
 
 // =====================================================
@@ -180,6 +290,7 @@ if (joinChatButton) {
 
         }
     );
+
 }
 
 
@@ -229,6 +340,7 @@ if (joinGroupButton) {
 
         }
     );
+
 }
 
 
@@ -263,6 +375,7 @@ if (createGroupButton) {
 
         }
     );
+
 }
 
 
@@ -276,6 +389,7 @@ if (sendButton) {
         "click",
         sendMessage
     );
+
 }
 
 
@@ -295,6 +409,483 @@ if (messageInput) {
 
         }
     );
+
+}
+
+
+// =====================================================
+// AI PREDICTIVE TYPING
+// =====================================================
+
+if (messageInput) {
+
+    messageInput.addEventListener(
+        "input",
+        function () {
+
+            const text =
+                messageInput.value.trim();
+
+
+            // Clear old timer
+
+            clearTimeout(
+                typingTimer
+            );
+
+
+            // Clear suggestions
+            // when input is empty
+
+            if (!text) {
+
+                clearTypingSuggestions();
+
+                return;
+
+            }
+
+
+            // Minimum 2 characters
+
+            if (text.length < 2) {
+
+                clearTypingSuggestions();
+
+                return;
+
+            }
+
+
+            // Wait before calling Gemini
+
+            typingTimer =
+                setTimeout(
+                    function () {
+
+                        generateTypingSuggestions(
+                            text
+                        );
+
+                    },
+                    600
+                );
+
+        }
+    );
+
+}
+
+
+// =====================================================
+// GENERATE PREDICTIVE TYPING SUGGESTIONS
+// =====================================================
+
+async function generateTypingSuggestions(text) {
+
+    if (!token) {
+        return;
+    }
+
+
+    // Don't call API for same text
+
+    if (
+        text === lastSuggestionText
+    ) {
+
+        return;
+
+    }
+
+
+    lastSuggestionText =
+        text;
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${AI_API_URL}/predictive`,
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Authorization":
+                            `Bearer ${token}`
+
+                    },
+
+                    body: JSON.stringify({
+
+                        text: text,
+
+                        recentMessages:
+                            recentMessages
+
+                    })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "Predictive AI response:",
+            data
+        );
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            clearTypingSuggestions();
+
+            return;
+
+        }
+
+
+        showTypingSuggestions(
+            data.suggestions || []
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Predictive AI error:",
+            error
+        );
+
+        clearTypingSuggestions();
+
+    }
+
+}
+
+
+// =====================================================
+// SHOW TYPING SUGGESTIONS
+// =====================================================
+
+function showTypingSuggestions(
+    suggestions
+) {
+
+    if (!typingSuggestions) {
+        return;
+    }
+
+
+    typingSuggestions.innerHTML =
+        "";
+
+
+    if (
+        !Array.isArray(suggestions) ||
+        suggestions.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    suggestions.forEach(
+        function (suggestion) {
+
+            const button =
+                document.createElement("button");
+
+
+            button.type =
+                "button";
+
+
+            button.className =
+                "ai-suggestion-button";
+
+
+            button.textContent =
+                suggestion;
+
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    addSuggestionToInput(
+                        suggestion
+                    );
+
+                }
+            );
+
+
+            typingSuggestions.appendChild(
+                button
+            );
+
+        }
+    );
+
+}
+
+
+// =====================================================
+// ADD AI SUGGESTION TO INPUT
+// =====================================================
+
+function addSuggestionToInput(
+    suggestion
+) {
+
+    if (!messageInput) {
+        return;
+    }
+
+
+    const currentText =
+        messageInput.value.trim();
+
+
+    if (!currentText) {
+
+        messageInput.value =
+            suggestion;
+
+    } else {
+
+        messageInput.value =
+            currentText +
+            " " +
+            suggestion;
+
+    }
+
+
+    messageInput.focus();
+
+
+    clearTypingSuggestions();
+
+
+    // Reset AI cache
+
+    lastSuggestionText =
+        "";
+
+}
+
+
+// =====================================================
+// CLEAR TYPING SUGGESTIONS
+// =====================================================
+
+function clearTypingSuggestions() {
+
+    if (!typingSuggestions) {
+        return;
+    }
+
+    typingSuggestions.innerHTML =
+        "";
+
+}
+
+
+// =====================================================
+// GENERATE SMART REPLIES
+// =====================================================
+
+async function generateSmartReplies(
+    message
+) {
+
+    if (!token) {
+        return;
+    }
+
+
+    if (!message) {
+        return;
+    }
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${AI_API_URL}/replies`,
+                {
+
+                    method: "POST",
+
+                    headers: {
+
+                        "Content-Type":
+                            "application/json",
+
+                        "Authorization":
+                            `Bearer ${token}`
+
+                    },
+
+                    body: JSON.stringify({
+
+                        message: message,
+
+                        recentMessages:
+                            recentMessages
+
+                    })
+
+                }
+            );
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            "Smart replies response:",
+            data
+        );
+
+
+        if (
+            !response.ok ||
+            !data.success
+        ) {
+
+            clearSmartReplies();
+
+            return;
+
+        }
+
+
+        showSmartReplies(
+            data.replies || []
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Smart replies error:",
+            error
+        );
+
+        clearSmartReplies();
+
+    }
+
+}
+
+
+// =====================================================
+// SHOW SMART REPLIES
+// =====================================================
+
+function showSmartReplies(
+    replies
+) {
+
+    if (!smartReplies) {
+        return;
+    }
+
+
+    smartReplies.innerHTML =
+        "";
+
+
+    if (
+        !Array.isArray(replies) ||
+        replies.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    replies.forEach(
+        function (reply) {
+
+            const button =
+                document.createElement("button");
+
+
+            button.type =
+                "button";
+
+
+            button.className =
+                "ai-reply-button";
+
+
+            button.textContent =
+                reply;
+
+
+            button.addEventListener(
+                "click",
+                function () {
+
+                    if (messageInput) {
+
+                        messageInput.value =
+                            reply;
+
+                        messageInput.focus();
+
+                    }
+
+
+                    clearSmartReplies();
+
+                }
+            );
+
+
+            smartReplies.appendChild(
+                button
+            );
+
+        }
+    );
+
+}
+
+
+// =====================================================
+// CLEAR SMART REPLIES
+// =====================================================
+
+function clearSmartReplies() {
+
+    if (!smartReplies) {
+        return;
+    }
+
+    smartReplies.innerHTML =
+        "";
+
 }
 
 
@@ -307,9 +898,11 @@ async function sendMessage() {
     const message =
         messageInput.value.trim();
 
+
     if (!message) {
         return;
     }
+
 
     if (!token) {
 
@@ -318,7 +911,9 @@ async function sendMessage() {
         );
 
         return;
+
     }
+
 
     try {
 
@@ -326,6 +921,7 @@ async function sendMessage() {
             await fetch(
                 "http://localhost:5000/api/messages",
                 {
+
                     method: "POST",
 
                     headers: {
@@ -341,16 +937,20 @@ async function sendMessage() {
                     body: JSON.stringify({
                         message: message
                     })
+
                 }
             );
 
+
         const data =
             await response.json();
+
 
         console.log(
             "Send message response:",
             data
         );
+
 
         if (!response.ok) {
 
@@ -360,13 +960,31 @@ async function sendMessage() {
             );
 
             return;
+
         }
 
-        messageInput.value = "";
+
+        messageInput.value =
+            "";
+
+
+        clearTypingSuggestions();
+
+        clearSmartReplies();
+
+        lastSuggestionText =
+            "";
+
+
+        addRecentMessage(
+            message
+        );
+
 
         createMessage(
             data.data
         );
+
 
     } catch (error) {
 
@@ -374,6 +992,7 @@ async function sendMessage() {
             "Send message error:",
             error
         );
+
 
         alert(
             "Unable to send message."
@@ -388,7 +1007,10 @@ async function sendMessage() {
 // MEDIA BUTTON
 // =====================================================
 
-if (mediaButton && mediaInput) {
+if (
+    mediaButton &&
+    mediaInput
+) {
 
     mediaButton.addEventListener(
         "click",
@@ -419,24 +1041,29 @@ if (mediaInput) {
             const file =
                 mediaInput.files[0];
 
+
             if (!file) {
                 return;
             }
+
 
             console.log(
                 "Selected file:",
                 file.name
             );
 
+
             console.log(
                 "File type:",
                 file.type
             );
 
+
             console.log(
                 "File size:",
                 file.size
             );
+
 
             uploadMedia();
 
@@ -455,6 +1082,7 @@ async function uploadMedia() {
     const file =
         mediaInput.files[0];
 
+
     if (!file) {
         return;
     }
@@ -467,15 +1095,20 @@ async function uploadMedia() {
     const maxSize =
         10 * 1024 * 1024;
 
+
     if (file.size > maxSize) {
 
         alert(
             "File size must be less than 10 MB."
         );
 
-        mediaInput.value = "";
+
+        mediaInput.value =
+            "";
+
 
         return;
+
     }
 
 
@@ -490,6 +1123,7 @@ async function uploadMedia() {
         );
 
         return;
+
     }
 
 
@@ -499,7 +1133,6 @@ async function uploadMedia() {
             new FormData();
 
 
-        // IMPORTANT
         // Backend expects field name "file"
 
         formData.append(
@@ -543,8 +1176,10 @@ async function uploadMedia() {
         );
 
 
-        if (!response.ok ||
-            !data.success) {
+        if (
+            !response.ok ||
+            !data.success
+        ) {
 
             alert(
                 data.message ||
@@ -552,6 +1187,7 @@ async function uploadMedia() {
             );
 
             return;
+
         }
 
 
@@ -560,20 +1196,13 @@ async function uploadMedia() {
         );
 
 
-        // ============================================
-        // SHOW MEDIA IN CHAT
-        // ============================================
-
         createMessage(
             data.data
         );
 
 
-        // ============================================
-        // CLEAR FILE INPUT
-        // ============================================
-
-        mediaInput.value = "";
+        mediaInput.value =
+            "";
 
 
     } catch (error) {
@@ -583,11 +1212,14 @@ async function uploadMedia() {
             error
         );
 
+
         alert(
             "Unable to upload media."
         );
 
-        mediaInput.value = "";
+
+        mediaInput.value =
+            "";
 
     }
 
@@ -608,6 +1240,7 @@ function createMessage(data) {
     const messageDiv =
         document.createElement("div");
 
+
     messageDiv.className =
         "chat-message";
 
@@ -619,8 +1252,10 @@ function createMessage(data) {
     const userDiv =
         document.createElement("div");
 
+
     userDiv.className =
         "message-user";
+
 
     userDiv.textContent =
         `User ${data.userId || ""}`;
@@ -639,6 +1274,7 @@ function createMessage(data) {
 
         const mediaContainer =
             document.createElement("div");
+
 
         mediaContainer.className =
             "media-message";
@@ -659,23 +1295,30 @@ function createMessage(data) {
             const image =
                 document.createElement("img");
 
+
             image.src =
                 data.mediaUrl;
+
 
             image.alt =
                 "Shared image";
 
+
             image.className =
                 "chat-image";
+
 
             image.style.maxWidth =
                 "300px";
 
+
             image.style.maxHeight =
                 "300px";
 
+
             image.style.borderRadius =
                 "10px";
+
 
             image.style.cursor =
                 "pointer";
@@ -712,20 +1355,26 @@ function createMessage(data) {
             const video =
                 document.createElement("video");
 
+
             video.src =
                 data.mediaUrl;
+
 
             video.controls =
                 true;
 
+
             video.className =
                 "chat-video";
+
 
             video.style.maxWidth =
                 "350px";
 
+
             video.style.maxHeight =
                 "300px";
+
 
             video.style.borderRadius =
                 "10px";
@@ -747,14 +1396,18 @@ function createMessage(data) {
             const fileLink =
                 document.createElement("a");
 
+
             fileLink.href =
                 data.mediaUrl;
+
 
             fileLink.target =
                 "_blank";
 
+
             fileLink.rel =
                 "noopener noreferrer";
+
 
             fileLink.textContent =
                 "📎 Open shared file";
@@ -790,8 +1443,10 @@ function createMessage(data) {
         const textDiv =
             document.createElement("div");
 
+
         textDiv.className =
             "message-text";
+
 
         textDiv.textContent =
             data.message;
@@ -812,6 +1467,7 @@ function createMessage(data) {
 
         const timeDiv =
             document.createElement("div");
+
 
         timeDiv.className =
             "message-time";
@@ -901,6 +1557,7 @@ async function loadMessages() {
             );
 
             return;
+
         }
 
 
@@ -912,6 +1569,12 @@ async function loadMessages() {
                 "";
 
         }
+
+
+        // Reset AI context
+
+        recentMessages =
+            [];
 
 
         // Display messages
@@ -927,6 +1590,17 @@ async function loadMessages() {
                     createMessage(
                         message
                     );
+
+
+                    if (
+                        message.message
+                    ) {
+
+                        addRecentMessage(
+                            message.message
+                        );
+
+                    }
 
                 }
             );
@@ -971,9 +1645,11 @@ if (logoutButton) {
                 "token"
             );
 
+
             localStorage.removeItem(
                 "user"
             );
+
 
             window.location.href =
                 "../login/login.html";
